@@ -1,4 +1,4 @@
-username = st.text_input("Username", key="login_user")
+import streamlit as st
 import mysql.connector
 import hashlib
 import paramiko
@@ -37,14 +37,28 @@ def register_user(full_name, username, password):
         return False
 
 def install_laravel_on_server(host, user, password, project_name):
-    # Fungsi untuk menginstal Laravel di server melalui SSH
+    # Fungsi untuk menginstal Laravel, mengatur VirtualHost, dan membuat database
+    db_name = f"{project_name}_db"
+    db_user = f"{project_name}_user"
+    db_password = f"pass_{project_name}*"
     commands = [
         "sudo apt update && sudo apt upgrade -y",
-        "sudo apt install -y apache2 php php-cli php-mbstring unzip curl php-xml composer",
+        "sudo apt install -y apache2 php php-cli php-mbstring unzip curl php-xml composer mysql-server",
         f"cd /var/www && composer create-project --prefer-dist laravel/laravel {project_name}",
         f"sudo chown -R www-data:www-data /var/www/{project_name}",
         f"sudo chmod -R 775 /var/www/{project_name}/storage /var/www/{project_name}/bootstrap/cache",
-        "sudo systemctl restart apache2"
+        "sudo systemctl restart apache2",
+        f"echo '<VirtualHost *:80>\n    ServerName {project_name}.local\n    DocumentRoot /var/www/{project_name}/public\n    <Directory /var/www/{project_name}/public>\n        AllowOverride All\n        Require all granted\n    </Directory>\n    ErrorLog ${{APACHE_LOG_DIR}}/{project_name}_error.log\n    CustomLog ${{APACHE_LOG_DIR}}/{project_name}_access.log combined\n</VirtualHost>' | sudo tee /etc/apache2/sites-available/{project_name}.conf",
+        f"sudo a2ensite {project_name}.conf",
+        "sudo systemctl reload apache2",
+        f"mysql -u root -e \"CREATE DATABASE {db_name};\"",
+        f"mysql -u root -e \"CREATE USER '{db_user}'@'localhost' IDENTIFIED BY '{db_password}';\"",
+        f"mysql -u root -e \"GRANT ALL PRIVILEGES ON {db_name}.* TO '{db_user}'@'localhost';\"",
+        f"mysql -u root -e \"FLUSH PRIVILEGES;\"",
+        f"sed -i 's/DB_DATABASE=.*/DB_DATABASE={db_name}/' /var/www/{project_name}/.env",
+        f"sed -i 's/DB_USERNAME=.*/DB_USERNAME={db_user}/' /var/www/{project_name}/.env",
+        f"sed -i 's/DB_PASSWORD=.*/DB_PASSWORD={db_password}/' /var/www/{project_name}/.env",
+        f"sed -i 's/SESSION_DRIVER=.*/SESSION_DRIVER=file/' /var/www/{project_name}/.env"
     ]
     try:
         ssh = paramiko.SSHClient()
