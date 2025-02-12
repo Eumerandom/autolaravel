@@ -3,7 +3,6 @@ import mysql.connector
 import hashlib
 import paramiko
 
-# Fungsi untuk menghubungkan ke database MySQL
 def connect_db():
     return mysql.connector.connect(
         host="localhost",
@@ -12,7 +11,6 @@ def connect_db():
         database="auth_db"
     )
 
-# Fungsi untuk mengautentikasi pengguna saat login
 def authenticate_user(username, password):
     db = connect_db()
     cursor = db.cursor(dictionary=True)
@@ -22,7 +20,6 @@ def authenticate_user(username, password):
     db.close()
     return user
 
-# Fungsi untuk mendaftarkan pengguna baru
 def register_user(full_name, username, password):
     db = connect_db()
     cursor = db.cursor()
@@ -30,21 +27,34 @@ def register_user(full_name, username, password):
     try:
         cursor.execute("INSERT INTO users (full_name, username, password) VALUES (%s, %s, %s)", (full_name, username, hashed_password))
         db.commit()
-        db.close()
         return True
     except mysql.connector.IntegrityError:
-        db.close()
         return False
+    finally:
+        db.close()
 
-# Fungsi untuk menginstal Laravel di server menggunakan SSH
 def install_laravel_on_server(host, user, password, project_name):
+    db_name = f"{project_name}_db"
+    db_user = f"{project_name}_user"
+    db_password = f"pass_{project_name}*"
     commands = [
         "sudo apt update && sudo apt upgrade -y",
-        "sudo apt install -y apache2 php php-cli php-mbstring unzip curl php-xml composer",
+        "sudo apt install -y apache2 php php-cli php-mbstring unzip curl php-xml composer mysql-server",
         f"cd /var/www && composer create-project --prefer-dist laravel/laravel {project_name}",
         f"sudo chown -R www-data:www-data /var/www/{project_name}",
         f"sudo chmod -R 775 /var/www/{project_name}/storage /var/www/{project_name}/bootstrap/cache",
-        "sudo systemctl restart apache2"
+        "sudo systemctl restart apache2",
+        f"echo '<VirtualHost *:80>\n    ServerName {project_name}.local\n    DocumentRoot /var/www/{project_name}/public\n    <Directory /var/www/{project_name}/public>\n        AllowOverride All\n        Require all granted\n    </Directory>\n    ErrorLog ${{APACHE_LOG_DIR}}/{project_name}_error.log\n    CustomLog ${{APACHE_LOG_DIR}}/{project_name}_access.log combined\n</VirtualHost>' | sudo tee /etc/apache2/sites-available/{project_name}.conf",
+        f"sudo a2ensite {project_name}.conf",
+        "sudo systemctl reload apache2",
+        f"mysql -u root -e \"CREATE DATABASE {db_name};\"",
+        f"mysql -u root -e \"CREATE USER '{db_user}'@'localhost' IDENTIFIED BY '{db_password}';\"",
+        f"mysql -u root -e \"GRANT ALL PRIVILEGES ON {db_name}.* TO '{db_user}'@'localhost';\"",
+        f"mysql -u root -e \"FLUSH PRIVILEGES;\"",
+        f"sed -i 's/DB_DATABASE=.*/DB_DATABASE={db_name}/' /var/www/{project_name}/.env",
+        f"sed -i 's/DB_USERNAME=.*/DB_USERNAME={db_user}/' /var/www/{project_name}/.env",
+        f"sed -i 's/DB_PASSWORD=.*/DB_PASSWORD={db_password}/' /var/www/{project_name}/.env",
+        f"sed -i 's/SESSION_DRIVER=.*/SESSION_DRIVER=file/' /var/www/{project_name}/.env"
     ]
     try:
         ssh = paramiko.SSHClient()
@@ -60,23 +70,18 @@ def install_laravel_on_server(host, user, password, project_name):
     except Exception as e:
         return f"Error: {e}"
 
-# Tampilan utama aplikasi Streamlit
+# UI utama
 st.title("Automasi Instalasi Laravel")
 st.divider()
 
-# Mengatur status autentikasi pengguna
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
 
-# Jika belum login, tampilkan form login dan register
 if not st.session_state["authenticated"]:
-    full_name = st.text_input("Nama Lengkap")
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-    
-    col1, col2 = st.columns([1, 1])
-    
-    with col1:
+    tab1, tab2 = st.tabs(["Login", "Register"])
+    with tab1:
+        username = st.text_input("Username", key="login_user")
+        password = st.text_input("Password", type="password", key="login_pass")
         if st.button("Login"):
             user = authenticate_user(username, password)
             if user:
@@ -85,26 +90,27 @@ if not st.session_state["authenticated"]:
                 st.rerun()
             else:
                 st.error("Username atau password salah!")
-    
-    with col2:
+    with tab2:
+        full_name = st.text_input("Nama Lengkap", key="reg_full_name")
+        username = st.text_input("Username", key="reg_user")
+        password = st.text_input("Password", type="password", key="reg_pass")
         if st.button("Register"):
             if register_user(full_name, username, password):
                 st.success("Registrasi berhasil! Silakan login.")
             else:
                 st.error("Username sudah digunakan!")
 
-# Jika sudah login, tampilkan form untuk instalasi Laravel
 if st.session_state["authenticated"]:
     st.subheader("Tentukan lokasi server")
     server_ip = st.text_input("IP Server", placeholder="192.168.1.100")
     server_user = st.text_input("Username SSH", value="root")
     server_password = st.text_input("Password SSH", type="password")
     project_name = st.text_input("Nama Project Laravel", "my-laravel-project")
-    
     if st.button("Install Laravel"):
-        if server_ip.strip() and server_user.strip() and server_password.strip() and project_name.strip():
+        if all([server_ip.strip(), server_user.strip(), server_password.strip(), project_name.strip()]):
             st.success(f"Memulai instalasi Laravel di {server_ip}...")
             log = install_laravel_on_server(server_ip, server_user, server_password, project_name)
             st.text_area("Log Instalasi", log, height=300)
+            st.success(f"Laravel berhasil diinstal! Anda dapat mengaksesnya di http://{project_name}.local")
         else:
             st.error("Semua field harus diisi!")
