@@ -1,8 +1,8 @@
 import streamlit as st
 import mysql.connector
 import hashlib
-import paramiko
 import re
+import paramiko
 
 def connect_db():
     return mysql.connector.connect(
@@ -11,9 +11,6 @@ def connect_db():
         password="paraSTREAM",
         database="auth_db"
     )
-
-def is_valid_email(email):
-    return re.match(r"^[\w\.-]+@[\w\.-]+\.[a-zA-Z]{2,}$", email)
 
 def authenticate_user(email, password):
     db = connect_db()
@@ -25,9 +22,8 @@ def authenticate_user(email, password):
     return user
 
 def register_user(full_name, email, password):
-    if not is_valid_email(email):
-        return "Invalid email format"
-    
+    if not re.match(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+        return "Email tidak valid!"
     db = connect_db()
     cursor = db.cursor()
     hashed_password = hashlib.sha256(password.encode()).hexdigest()
@@ -40,10 +36,21 @@ def register_user(full_name, email, password):
     finally:
         db.close()
 
+def apply_custom_style():
+    st.markdown("""
+        <style>
+            body { background-color: #f8f9fa; }
+            .stApp { max-width: 800px; margin: auto; }
+            h1 { color: #ff2d20; text-align: center; }
+            .stButton>button { background-color: #ff2d20; color: white; border-radius: 5px; }
+            .stTextInput>div>div>input { border-radius: 5px; }
+        </style>
+    """, unsafe_allow_html=True)
+
 def install_laravel_on_server(host, user, password, project_name):
     db_name = f"{project_name}_db"
     db_user = f"{project_name}_user"
-    db_password = f"pass_{project_name}*$#"
+    db_password = f"pass_{project_name}*"
     commands = [
         "sudo apt update && sudo apt upgrade -y",
         "sudo apt install -y apache2 php php-cli php-mbstring unzip curl php-xml composer mysql-server",
@@ -51,7 +58,7 @@ def install_laravel_on_server(host, user, password, project_name):
         f"sudo chown -R www-data:www-data /var/www/{project_name}",
         f"sudo chmod -R 775 /var/www/{project_name}/storage /var/www/{project_name}/bootstrap/cache",
         "sudo systemctl restart apache2",
-        f"echo '<VirtualHost *:80>\n    ServerName {project_name}.local\n    DocumentRoot /var/www/{project_name}/public\n    <Directory /var/www/{project_name}/public>\n        AllowOverride All\n        Require all granted\n    </Directory>\n    ErrorLog ${APACHE_LOG_DIR}/{project_name}_error.log\n    CustomLog ${APACHE_LOG_DIR}/{project_name}_access.log combined\n</VirtualHost>' | sudo tee /etc/apache2/sites-available/{project_name}.conf",
+        f"echo '<VirtualHost *:80>\n    ServerName {project_name}.local\n    DocumentRoot /var/www/{project_name}/public\n    <Directory /var/www/{project_name}/public>\n        AllowOverride All\n        Require all granted\n    </Directory>\n    ErrorLog ${{APACHE_LOG_DIR}}/{project_name}_error.log\n    CustomLog ${{APACHE_LOG_DIR}}/{project_name}_access.log combined\n</VirtualHost>' | sudo tee /etc/apache2/sites-available/{project_name}.conf",
         f"sudo a2ensite {project_name}.conf",
         "sudo systemctl reload apache2",
         f"mysql -u root -e \"CREATE DATABASE {db_name};\"",
@@ -77,7 +84,8 @@ def install_laravel_on_server(host, user, password, project_name):
     except Exception as e:
         return f"Error: {e}"
 
-# UI utama
+apply_custom_style()
+
 st.title("Automasi Instalasi Laravel")
 st.divider()
 
@@ -105,10 +113,8 @@ if not st.session_state["authenticated"]:
             result = register_user(full_name, email, password)
             if result == True:
                 st.success("Registrasi berhasil! Silakan login.")
-            elif result == "Invalid email format":
-                st.error("Format email tidak valid!")
             else:
-                st.error("Email sudah digunakan!")
+                st.error(result)
 
 if st.session_state["authenticated"]:
     st.subheader("Tentukan lokasi server")
@@ -124,4 +130,3 @@ if st.session_state["authenticated"]:
             st.success(f"Laravel berhasil diinstal! Anda dapat mengaksesnya di http://{project_name}.local")
         else:
             st.error("Semua field harus diisi!")
-
