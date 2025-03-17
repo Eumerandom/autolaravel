@@ -1,43 +1,13 @@
-# aku membenakkan kode i.py di sini
-
 import streamlit as st
+import paramiko
 import mysql.connector
 import hashlib
-import paramiko
 import re
+
 import style as style
+import login as login
 
-def connect_db():
-    return mysql.connector.connect(
-        host="localhost",
-        user="parastream_adm",
-        password="paraSTREAM",
-        database="auth_db"
-    )
-
-def authenticate_user(email, password):
-    db = connect_db()
-    cursor = db.cursor(dictionary=True)
-    hashed_password = hashlib.sha256(password.encode()).hexdigest()
-    cursor.execute("SELECT * FROM users WHERE email=%s AND password=%s", (email, hashed_password))
-    user = cursor.fetchone()
-    db.close()
-    return user
-
-def register_user(full_name, email, password):
-    if not re.match(r"^[\w\.-]+@[\w\.-]+\.[a-zA-Z]{2,}$", email):
-        return "Email tidak valid!"
-    db = connect_db()
-    cursor = db.cursor()
-    hashed_password = hashlib.sha256(password.encode()).hexdigest()
-    try:
-        cursor.execute("INSERT INTO users (full_name, email, password) VALUES (%s, %s, %s)", (full_name, email, hashed_password))
-        db.commit()
-        return True
-    except mysql.connector.IntegrityError:
-        return "Email sudah digunakan!"
-    finally:
-        db.close()
+login.connect_db()
 
 def test_ssh_connection(host, user, password):
     try:
@@ -54,18 +24,7 @@ def install_laravel_on_server(host, user, password, project_name, mysql_user, my
     db_user = f"{project_name}_user"
     db_password = f"pass_{project_name}*"
     commands = [
-        # "sudo apt update && sudo apt upgrade -y",
-        
-        # menginstall jika packet belum ada
-        
-        # "MISSING_PKGS=''",
-        # "for pkg in apache2 php php-cli php-mbstring unzip curl php-xml composer mysql-server; do "
-        # "  if ! dpkg -l | grep -wq \"$pkg\" && ! command -v \"$pkg\" >/dev/null 2>&1; then "
-        # "    MISSING_PKGS=\"$MISSING_PKGS $pkg\"; "
-        # "  fi; "
-        # "done",
-        # "if [ -n \"$MISSING_PKGS\" ]; then sudo apt install -y $MISSING_PKGS || echo 'Beberapa paket gagal diinstal'; fi",
-                
+               
         f"if ! grep -q 'Listen {port}' /etc/apache2/ports.conf; then echo 'Listen {port}' | sudo tee -a /etc/apache2/ports.conf; fi",
         f"if sudo lsof -i :{port} | grep LISTEN; then echo 'Port {port} sudah digunakan.'; else echo 'Port {port} tersedia.'; fi",
         
@@ -111,26 +70,6 @@ def install_laravel_on_server(host, user, password, project_name, mysql_user, my
         output_placeholder = st.empty()
         log_output = ""
         for command in commands:
-            # stdin, stdout, stderr = ssh.exec_command(f"{command}; echo $?", get_pty=True)
-            # stdout_lines = stdout.readlines()
-            # stderr_lines = stderr.readlines()
-            # for line in iter(stdout.readline, ""):
-            #     log_output += f"[OUTPUT] {line}"
-            #     output_placeholder.text_area("Log Instalasi", log_output, height=500)
-
-            # for err in iter(stderr.readline, ""):
-            #     log_output += f"[ERROR] {err}"
-            #     output_placeholder.text_area("Log Instalasi", log_output, height=500)
-            # exit_code = int(stdout_lines[-1].strip()) if stdout_lines else 1
-            
-            # if exit_code != 0:
-            #     log_output += f"\n[ERROR] {command} (Exit Code: {exit_code}):\n" + "".join(stderr_lines)
-            #     log_output += "\nOutput:\n" + "".join(stdout_lines)
-            #     output_placeholder.text_area("Log Instalasi", log_output, height=500)
-            #     break
-            # else:
-            #     log_output += f"\n[SUCCESS] {command}:\n" + "".join(stdout_lines)
-            #     output_placeholder.text_area("Log Instalasi", log_output, height=500)
 
             stdin, stdout, stderr = ssh.exec_command(command, get_pty=True)
             for line in iter(stdout.readline, ""):
@@ -141,7 +80,6 @@ def install_laravel_on_server(host, user, password, project_name, mysql_user, my
                 log_output += f"[ERROR] {err}"
                 output_placeholder.text_area("Log Instalasi", log_output, height=300)
 
-
         ssh.close()
         return log_output
     except Exception as e:
@@ -149,7 +87,7 @@ def install_laravel_on_server(host, user, password, project_name, mysql_user, my
 
 st.set_page_config(page_title="Automasi Instalasi Laravel", layout="wide")
 
-st.markdown( style, unsafe_allow_html=True)
+st.markdown(style, unsafe_allow_html=True)
 
 st.header("Automasi Instalasi Laravel")
 st.text(" ")
@@ -166,7 +104,7 @@ with st.container():
             email = st.text_input("Email", key="login_email")
             password = st.text_input("Password", type="password", key="login_pass")
             if st.button("Login"):
-                user = authenticate_user(email, password)
+                user = login.authenticate_user(email, password)
                 if user:
                     st.session_state["authenticated"] = True
                     st.rerun()
@@ -178,7 +116,7 @@ with st.container():
             email = st.text_input("Email", key="reg_email")
             password = st.text_input("Password", type="password", key="reg_pass")
             if st.button("Register"):
-                result = register_user(full_name, email, password)
+                result = login.register_user(full_name, email, password)
                 if result == True:
                     message_regis.success("Registrasi berhasil! Silakan login.")
                 else:
