@@ -53,17 +53,17 @@ def install_laravel_on_server(host, user, password, project_name, mysql_user, my
     db_user = f"{project_name}_user"
     db_password = f"pass_{project_name}*"
     commands = [
-        "sudo apt update && sudo apt upgrade -y",
+        # "sudo apt update && sudo apt upgrade -y",
         
-        menginstall jika packet belum ada
+        # menginstall jika packet belum ada
         
-        "MISSING_PKGS=''",
-        "for pkg in apache2 php php-cli php-mbstring unzip curl php-xml composer mysql-server; do "
-        "  if ! dpkg -l | grep -wq \"$pkg\" && ! command -v \"$pkg\" >/dev/null 2>&1; then "
-        "    MISSING_PKGS=\"$MISSING_PKGS $pkg\"; "
-        "  fi; "
-        "done",
-        "if [ -n \"$MISSING_PKGS\" ]; then sudo apt install -y $MISSING_PKGS || echo 'Beberapa paket gagal diinstal'; fi",
+        # "MISSING_PKGS=''",
+        # "for pkg in apache2 php php-cli php-mbstring unzip curl php-xml composer mysql-server; do "
+        # "  if ! dpkg -l | grep -wq \"$pkg\" && ! command -v \"$pkg\" >/dev/null 2>&1; then "
+        # "    MISSING_PKGS=\"$MISSING_PKGS $pkg\"; "
+        # "  fi; "
+        # "done",
+        # "if [ -n \"$MISSING_PKGS\" ]; then sudo apt install -y $MISSING_PKGS || echo 'Beberapa paket gagal diinstal'; fi",
                 
         f"if ! grep -q 'Listen {port}' /etc/apache2/ports.conf; then echo 'Listen {port}' | sudo tee -a /etc/apache2/ports.conf; fi",
         f"if sudo lsof -i :{port} | grep LISTEN; then echo 'Port {port} sudah digunakan.'; else echo 'Port {port} tersedia.'; fi",
@@ -110,9 +110,6 @@ def install_laravel_on_server(host, user, password, project_name, mysql_user, my
         output_placeholder = st.empty()
         log_output = ""
         for command in commands:
-
-            # HAPUS AJA GAPAPAAA
-
             # stdin, stdout, stderr = ssh.exec_command(f"{command}; echo $?", get_pty=True)
             # stdout_lines = stdout.readlines()
             # stderr_lines = stderr.readlines()
