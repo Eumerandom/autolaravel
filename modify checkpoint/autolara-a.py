@@ -4,10 +4,7 @@ import paramiko
 # import mysql.connector
 # import hashlib
 # import re
-
 import login as login
-
-st.markdown(style, unsafe_allow_html=True)
 
 # menghubungkan ke database untuk form login
 login.connect_db()
@@ -221,4 +218,3 @@ with st.container():
                             else:
                                 st.text_area("Log Instalasi", log, height=300)
                                 st.success(f"Laravel berhasil diinstal! Anda dapat mengaksesnya di http://{project_name}.local:{port}")
-
