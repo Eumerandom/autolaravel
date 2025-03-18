@@ -1,5 +1,6 @@
 import mysql.connector
 import hashlib
+import re
 
 # menghubungkan ke database untuk menyimpan data user
 def connect_db():
