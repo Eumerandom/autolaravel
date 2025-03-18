@@ -1,10 +1,10 @@
 import streamlit as st
+import style as style
 import paramiko
 # import mysql.connector
 # import hashlib
 # import re
 
-import style as style
 import login as login
 
 st.markdown(style, unsafe_allow_html=True)
