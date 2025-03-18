@@ -4,8 +4,8 @@ import paramiko
 # import hashlib
 # import re
 
-from style import style as style
-from login import login as login
+import style as style
+import login as login
 
 st.markdown(style, unsafe_allow_html=True)
 
