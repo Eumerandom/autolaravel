@@ -201,8 +201,9 @@ with st.container():
                         # tombol instalasi
                         if st.button("Install Laravel"):
                             st.success(f"Memulai instalasi Laravel di {server_ip} dengan port {port}...")
-                            mysql_user = st.session_state.get("mysql_user", "root")
-                            mysql_password = st.session_state.get("mysql_password", "")
+                            if database == "MySQL":
+                                db_user = st.session_state.get("db_user", "root")
+                                db_password = st.session_state.get("db_password", "")
 
                             # menampilkan log dan error
                             log = install_laravel_on_server(server_ip, server_user, server_password, project_name, port)
