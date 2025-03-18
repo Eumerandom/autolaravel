@@ -36,3 +36,4 @@ def register_user(full_name, email, password):
         return "Email sudah digunakan!"
     finally:
         db.close()
+        
