@@ -7,7 +7,7 @@ import paramiko
 import style
 import login as login
 
-style()
+st.markdown(style)
 
 # menghubungkan ke database untuk form login
 login.connect_db()
