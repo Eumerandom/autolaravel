@@ -4,8 +4,10 @@ import paramiko
 # import hashlib
 # import re
 
-import login as login
 import style
+import login as login
+
+style()
 
 # menghubungkan ke database untuk form login
 login.connect_db()
