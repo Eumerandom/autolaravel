@@ -205,7 +205,7 @@ with st.container():
                             mysql_password = st.session_state.get("mysql_password", "")
 
                             # menampilkan log dan error
-                            log = install_laravel_on_server(server_ip, server_user, server_password, project_name, mysql_user, mysql_password, port)
+                            log = install_laravel_on_server(server_ip, server_user, server_password, project_name, port)
                             if "Error: Authentication failed." in log:
                                 st.error("Gagal masuk ke server. Periksa kembali IP, username, atau password.")
                             elif "Permission denied" in log:
