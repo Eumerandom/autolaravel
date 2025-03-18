@@ -246,17 +246,19 @@ with st.container():
                         db_user = st.text_input("Username MySQL", value="root")
                         db_password = st.text_input("Password MySQL", type="password")
                         if database == "MySQL":
-                            # mengedit file .env
-                            f"sed -i 's/DB_DATABASE=.*/DB_CONNECTION=mysql/' /var/www/{project_name}/.env",
-                            f"sed -i 's/DB_DATABASE=.*/DB_DATABASE={db_name}/' /var/www/{project_name}/.env",
-                            f"sed -i 's/DB_USERNAME=.*/DB_USERNAME={db_user}/' /var/www/{project_name}/.env",
-                            f"sed -i 's/DB_PASSWORD=.*/DB_PASSWORD={db_password}/' /var/www/{project_name}/.env",
-                            f"sed -i 's/SESSION_DRIVER=.*/SESSION_DRIVER=file/' /var/www/{project_name}/.env",
+                            commands = [
+                                # mengedit file .env
+                                f"sed -i 's/DB_DATABASE=.*/DB_CONNECTION=mysql/' /var/www/{project_name}/.env",
+                                f"sed -i 's/DB_DATABASE=.*/DB_DATABASE={db_name}/' /var/www/{project_name}/.env",
+                                f"sed -i 's/DB_USERNAME=.*/DB_USERNAME={db_user}/' /var/www/{project_name}/.env",
+                                f"sed -i 's/DB_PASSWORD=.*/DB_PASSWORD={db_password}/' /var/www/{project_name}/.env",
+                                f"sed -i 's/SESSION_DRIVER=.*/SESSION_DRIVER=file/' /var/www/{project_name}/.env",
+                                
+                                # create database
+                                f"mysql -u {db_user} -p {db_password} -e \"CREATE DATABASE {db_name};\"",
+                                f"mysql -u {db_user} -p {db_password} -e \"GRANT ALL PRIVILEGES ON {db_name}.* TO `{db_user}`@'%';\"",
+                            ]
                             
-                            # create database
-                            f"mysql -u {db_user} -p {db_password} -e \"CREATE DATABASE {db_name};\"",
-                            f"mysql -u {db_user} -p {db_password} -e \"GRANT ALL PRIVILEGES ON {db_name}.* TO `{db_user}`@'%';\"",
-
                         # SQLite
                         else:
                                 f"sed -i 's/DB_DATABASE=.*/DB_CONNECTION=sqlite/' /var/www/{project_name}/.env",
