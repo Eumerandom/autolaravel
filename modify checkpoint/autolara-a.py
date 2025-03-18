@@ -184,8 +184,9 @@ with st.container():
                                                                 
                     if st.button("Simpan", key="key_tab2"):    
                         if all([db_user.strip(), db_password.strip()]):
-                            st.session_state["db_user"] = db_user
-                            st.session_state["db_password"] = db_password
+                            if database == "MySQL":
+                                st.session_state["db_user"] = db_user
+                                st.session_state["db_password"] = db_password
                             st.session_state["tab2_complete"] = True
                             message_placeholder2.success("Tersimpan!")
                         else:
