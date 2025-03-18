@@ -78,8 +78,6 @@ def install_laravel_on_server(host, user, password, project_name, port):
         return log_output
     except Exception as e:
         return f"Error: {e}"
-    
-           
 
 # tampilan aplikasi
 st.set_page_config(page_title="Automasi Instalasi Laravel", layout="wide")
@@ -265,14 +263,14 @@ with st.container():
                                 f"sed -i 's/DB_DATABASE=.*/DB_DATABASE={db_name}/database/database.sqlite' /var/www/{project_name}/.env", 
                                                                 
                     if st.button("Simpan", key="key_tab2"):    
-                        # if all([db_user.strip(), db_password.strip()]):
                         if database == "MySQL":
-                            st.session_state["db_user"] = db_user
-                            st.session_state["db_password"] = db_password
-                        st.session_state["tab2_complete"] = True
-                        message_placeholder2.success("Tersimpan!")
-                    else:
-                        message_placeholder2.error("Semua field harus diisi!")
+                            if all([db_user.strip(), db_password.strip()]):
+                                st.session_state["db_user"] = db_user
+                                st.session_state["db_password"] = db_password
+                                st.session_state["tab2_complete"] = True
+                                message_placeholder2.success("Tersimpan!")
+                            else:
+                                message_placeholder2.error("Semua field harus diisi!")
                 # halaman summarize
                 if st.session_state["tab2_complete"]:
                     with tab3:
