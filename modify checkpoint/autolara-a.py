@@ -82,23 +82,7 @@ def install_laravel_on_server(host, user, password, project_name, port):
     except Exception as e:
         return f"Error: {e}"
     
-def configure_database(db_name, db_user, db_password, project_name):
-    if database == "MySQL":
-        # mengedit file .env
-        f"sed -i 's/DB_DATABASE=.*/DB_CONNECTION=mysql/' /var/www/{project_name}/.env",
-        f"sed -i 's/DB_DATABASE=.*/DB_DATABASE={db_name}/' /var/www/{project_name}/.env",
-        f"sed -i 's/DB_USERNAME=.*/DB_USERNAME={db_user}/' /var/www/{project_name}/.env",
-        f"sed -i 's/DB_PASSWORD=.*/DB_PASSWORD={db_password}/' /var/www/{project_name}/.env",
-        f"sed -i 's/SESSION_DRIVER=.*/SESSION_DRIVER=file/' /var/www/{project_name}/.env",
-        
-        # create database
-        f"mysql -u {db_user} -p {db_password} -e \"CREATE DATABASE {db_name};\"",
-        f"mysql -u {db_user} -p {db_password} -e \"GRANT ALL PRIVILEGES ON {db_name}.* TO `{db_user}`@'%';\"",
-
-    # SQLite
-    else:
-            f"sed -i 's/DB_DATABASE=.*/DB_CONNECTION=sqlite/' /var/www/{project_name}/.env",
-            f"sed -i 's/DB_DATABASE=.*/DB_DATABASE={db_name}/database/database.sqlite' /var/www/{project_name}/.env",        
+           
 
 # tampilan aplikasi
 st.set_page_config(page_title="Automasi Instalasi Laravel", layout="wide")
@@ -175,14 +159,29 @@ with st.container():
             if st.session_state["tab1_complete"]:
                 with tab2:
                     message_placeholder2 = st.empty()
+                    db_name = f"{project_name}_db"
 
                     database = st.selectbox("Database", ["MySQL", "SQLite"])
                     if database == "MySQL":
                         db_user = st.text_input("Username MySQL", value="root")
                         db_password = st.text_input("Password MySQL", type="password")
-                    
-                    db_name = f"{project_name}_db"
-                        
+                        if database == "MySQL":
+                            # mengedit file .env
+                            f"sed -i 's/DB_DATABASE=.*/DB_CONNECTION=mysql/' /var/www/{project_name}/.env",
+                            f"sed -i 's/DB_DATABASE=.*/DB_DATABASE={db_name}/' /var/www/{project_name}/.env",
+                            f"sed -i 's/DB_USERNAME=.*/DB_USERNAME={db_user}/' /var/www/{project_name}/.env",
+                            f"sed -i 's/DB_PASSWORD=.*/DB_PASSWORD={db_password}/' /var/www/{project_name}/.env",
+                            f"sed -i 's/SESSION_DRIVER=.*/SESSION_DRIVER=file/' /var/www/{project_name}/.env",
+                            
+                            # create database
+                            f"mysql -u {db_user} -p {db_password} -e \"CREATE DATABASE {db_name};\"",
+                            f"mysql -u {db_user} -p {db_password} -e \"GRANT ALL PRIVILEGES ON {db_name}.* TO `{db_user}`@'%';\"",
+
+                        # SQLite
+                        else:
+                                f"sed -i 's/DB_DATABASE=.*/DB_CONNECTION=sqlite/' /var/www/{project_name}/.env",
+                                f"sed -i 's/DB_DATABASE=.*/DB_DATABASE={db_name}/database/database.sqlite' /var/www/{project_name}/.env", 
+                                                                
                     if st.button("Simpan", key="key_tab2"):    
                         if all([db_user.strip(), db_password.strip()]):
                             st.session_state["db_user"] = db_user
