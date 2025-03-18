@@ -271,6 +271,7 @@ with st.container():
                                 message_placeholder2.success("Tersimpan!")
                             else:
                                 message_placeholder2.error("Semua field harus diisi!")
+                        message_placeholder2.success("Tersimpan!")
                 # halaman summarize
                 if st.session_state["tab2_complete"]:
                     with tab3:
