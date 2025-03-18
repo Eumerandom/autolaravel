@@ -1,3 +1,7 @@
+import mysql.connector
+import hashlib
+
+# menghubungkan ke database untuk menyimpan data user
 def connect_db():
     return mysql.connector.connect(
         host="localhost",
@@ -6,6 +10,7 @@ def connect_db():
         database="auth_db"
     )
 
+# autentikasi login user
 def authenticate_user(email, password):
     db = connect_db()
     cursor = db.cursor(dictionary=True)
@@ -15,6 +20,7 @@ def authenticate_user(email, password):
     db.close()
     return user
 
+# registrasi user
 def register_user(full_name, email, password):
     if not re.match(r"^[\w\.-]+@[\w\.-]+\.[a-zA-Z]{2,}$", email):
         return "Email tidak valid!"

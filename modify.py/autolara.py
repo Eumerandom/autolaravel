@@ -1,14 +1,16 @@
 import streamlit as st
 import paramiko
-import mysql.connector
-import hashlib
-import re
+# import mysql.connector
+# import hashlib
+# import re
 
 import style as style
 import login as login
 
+# menghubungkan ke database untuk form login
 login.connect_db()
 
+# menghubungkan ke ssh
 def test_ssh_connection(host, user, password):
     try:
         ssh = paramiko.SSHClient()
@@ -19,20 +21,24 @@ def test_ssh_connection(host, user, password):
     except Exception as e:
         return False, f"Gagal koneksi SSH: {e}"
 
+# instalasi laravel
 def install_laravel_on_server(host, user, password, project_name, mysql_user, mysql_password, port=80):
     db_name = f"{project_name}_db"
     db_user = f"{project_name}_user"
     db_password = f"pass_{project_name}*"
     commands = [
-               
+
+        # memeriksa port 
         f"if ! grep -q 'Listen {port}' /etc/apache2/ports.conf; then echo 'Listen {port}' | sudo tee -a /etc/apache2/ports.conf; fi",
         f"if sudo lsof -i :{port} | grep LISTEN; then echo 'Port {port} sudah digunakan.'; else echo 'Port {port} tersedia.'; fi",
         
+        # create project dan mengatur permission
         f"cd /var/www && composer create-project --no-progress --quiet --prefer-dist laravel/laravel {project_name} &&"
         f"sudo chown -R www-data:www-data /var/www/{project_name} &&",
         f"sudo chmod -R 775 /var/www/{project_name}/storage /var/www/{project_name}/bootstrap/cache",
         "sudo systemctl restart apache2",
 
+        # create file project
         f"if [ ! -f /etc/apache2/sites-available/{project_name}.conf ]; then "
         f"sudo bash -c 'cat > /etc/apache2/sites-available/{project_name}.conf <<EOF\n"
         f"<VirtualHost *:{port}>\n"
@@ -47,22 +53,27 @@ def install_laravel_on_server(host, user, password, project_name, mysql_user, my
         f"</VirtualHost>\n"
         f"EOF'",
         
+        # menyimpan informasi host
         f"if ! grep -q '{project_name}.local' /etc/hosts; then echo '127.0.0.1 {project_name}.local' | sudo tee -a /etc/hosts; fi",
         f"sudo a2ensite {project_name}.conf",
         "sudo systemctl restart apache2",
         "sudo a2enmod rewrite",
         "sudo systemctl restart apache2",
         
+        # create database dan user
         f"mysql -u {mysql_user} -p {mysql_password} -e \"CREATE DATABASE {db_name};\"",
         f"mysql -u {mysql_user} -p {mysql_password} -e \"CREATE USER `{db_user}`@'%' IDENTIFIED BY '{db_password}';\"",
         f"mysql -u {mysql_user} -p {mysql_password} -e \"GRANT ALL PRIVILEGES ON {db_name}.* TO `{db_user}`@'%';\"",
         f"mysql -u {mysql_user} -p {mysql_password} -e \"FLUSH PRIVILEGES;\"",
         
+        # mengedit file .env
         f"sed -i 's/DB_DATABASE=.*/DB_DATABASE={db_name}/' /var/www/{project_name}/.env",
         f"sed -i 's/DB_USERNAME=.*/DB_USERNAME={db_user}/' /var/www/{project_name}/.env",
         f"sed -i 's/DB_PASSWORD=.*/DB_PASSWORD={db_password}/' /var/www/{project_name}/.env",
         f"sed -i 's/SESSION_DRIVER=.*/SESSION_DRIVER=file/' /var/www/{project_name}/.env",
     ]
+
+    # log instalasi 
     try:
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -85,6 +96,7 @@ def install_laravel_on_server(host, user, password, project_name, mysql_user, my
     except Exception as e:
         return f"Error: {e}"
 
+# tampilan aplikasi
 st.set_page_config(page_title="Automasi Instalasi Laravel", layout="wide")
 
 st.markdown(style, unsafe_allow_html=True)
@@ -97,8 +109,10 @@ with st.container():
     if "authenticated" not in st.session_state:
         st.session_state["authenticated"] = False
 
+    # halaman login dan registrasi
     if not st.session_state["authenticated"]:
         tab1, tab2 = st.tabs(["Login", "Register"])
+        # halaman login
         with tab1:
             message_login = st.empty()
             email = st.text_input("Email", key="login_email")
@@ -110,6 +124,7 @@ with st.container():
                     st.rerun()
                 else:
                     message_login.error("Email atau password salah!")
+        # halaman registrasi
         with tab2:
             message_regis = st.empty()
             full_name = st.text_input("Nama Lengkap", key="reg_full_name")
@@ -129,7 +144,7 @@ with st.container():
 
     if st.session_state["authenticated"]:
             tab1, tab2, tab3 = st.tabs(["Informasi Project", "Informasi MySQL", "Halaman Instalasi"])
-            
+            # halaman informasi project
             with tab1:
                 message_placeholder = st.empty()
                 project_name = st.text_input("Nama Project Laravel", "my-laravel-project")
@@ -152,7 +167,7 @@ with st.container():
                             message_placeholder.error(message)
                     else:
                         message_placeholder.error("Semua field harus diisi!")
-                
+            # halaman informasi database
             if st.session_state["tab1_complete"]:
                 with tab2:
                     message_placeholder2 = st.empty()
@@ -167,17 +182,21 @@ with st.container():
                             message_placeholder2.success("Tersimpan!")
                         else:
                             message_placeholder2.error("Semua field harus diisi!")
-                            
+                # halaman summarize
                 if st.session_state["tab2_complete"]:
                     with tab3:
                         st.markdown("<h3>Informasi Project</h3>", unsafe_allow_html=True)
                         st.text(f"Nama Project: {project_name}")
                         st.text(f"Server Tujuan: {server_ip}:{port}")
                         st.text("")
+
+                        # tombol instalasi
                         if st.button("Install Laravel"):
                             st.success(f"Memulai instalasi Laravel di {server_ip} dengan port {port}...")
                             mysql_user = st.session_state.get("mysql_user", "root")
                             mysql_password = st.session_state.get("mysql_password", "")
+
+                            # menampilkan log dan error
                             log = install_laravel_on_server(server_ip, server_user, server_password, project_name, mysql_user, mysql_password, port)
                             if "Error: Authentication failed." in log:
                                 st.error("Gagal masuk ke server. Periksa kembali IP, username, atau password.")
